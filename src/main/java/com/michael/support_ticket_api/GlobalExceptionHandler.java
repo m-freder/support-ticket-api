@@ -3,20 +3,38 @@ package com.michael.support_ticket_api;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST,
+                        "Validation failed for one or more fields."
+                );
         problemDetail.setTitle("Validation Error");
         problemDetail.setType(URI.create("https://example.com/problems/validation-error"));
+        Map<String, String> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value",
+                        (first, second) -> first,
+                        LinkedHashMap::new
+                ));
+        problemDetail.setProperty("errors", fieldErrors);
         return problemDetail;
     }
 
@@ -31,10 +49,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ProblemDetail handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Malformed JSON request. Ensure fields are valid JSON (e.g., strings must be quoted)."
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Malformed JSON request. Ensure fields are valid JSON (e.g., strings must be quoted).");
         problemDetail.setTitle("Invalid Request Body");
         problemDetail.setType(URI.create("https://example.com/problems/invalid-request-body"));
         return problemDetail;
