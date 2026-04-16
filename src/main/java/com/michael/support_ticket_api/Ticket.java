@@ -4,6 +4,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 public class Ticket {
@@ -12,12 +15,16 @@ public class Ticket {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Title is required")
+    @Size(max = 255, message = "Title must be less than 255 characters")
     private String title;
     private String description;
+    @NotBlank(message = "Status is required")
+    @Pattern(regexp = "OPEN|IN_PROGRESS|CLOSED",
+            message = "Status must be OPEN, IN_PROGRESS, or CLOSED")
     private String status;
 
-    public Ticket() {
-    }
+    public Ticket() {}
 
     public Ticket(Long id, String title, String description, String status) {
         this.id = id;
